@@ -21,3 +21,11 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	createdUser := db.Create(user)
 	json.NewEncoder(w).Encode(createdUser)
 }
+
+func Users(w http.ResponseWriter, r *http.Request) {
+	var users []models.User
+	json.NewDecoder(r.Body).Decode(&users)
+
+	allUsers := db.Find(&users)
+	json.NewEncoder(w).Encode(allUsers)
+}
