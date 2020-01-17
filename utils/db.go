@@ -34,7 +34,9 @@ func ConnectDB() *gorm.DB {
 	}
 
 	db.AutoMigrate(
-		&models.User{})
+		&models.User{},
+		&models.Message{},
+	)
 
 	log.Println("Successfully connected!", db)
 	return db
