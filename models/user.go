@@ -11,7 +11,7 @@ import (
 type User struct {
 	gorm.Model
 
-	UserName string `json:"user_name" gorm:"type:varchar(100);unique_index"`
+	UserName string `gorm:"type:varchar(100);unique_index"`
 }
 
 // NewUser - create a new user in db
