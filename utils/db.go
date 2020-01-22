@@ -24,7 +24,7 @@ func ConnectDB() *gorm.DB {
 	databaseName := os.Getenv("databaseName")
 	databaseHost := os.Getenv("databaseHost")
 
-	dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s", databaseHost, username, databaseName, password)
+	dbURI := fmt.Sprintf("host=%s user=%s dbname=%s password=%s sslmode=disable", databaseHost, username, databaseName, password)
 
 	db, err := gorm.Open("postgres", dbURI)
 
