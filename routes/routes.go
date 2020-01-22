@@ -3,13 +3,37 @@ package routes
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	"github.com/worldofprasanna/fchat-server/models"
 	"github.com/worldofprasanna/fchat-server/services"
 	"github.com/worldofprasanna/fchat-server/utils"
 )
+
+var clients = make(map[string]*websocket.Conn) // connected clients
+var broadcast = make(chan models.Message)      // broadcast channel
+
+// Configure the upgrader
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+// UserType : struct to distinguish socket response
+type UserType struct {
+	User models.User
+	Type string
+}
+
+// MessageType : struct to distinguish socket response
+type MessageType struct {
+	Message models.Message
+	Type    string
+}
 
 // Handlers function
 func Handlers() *mux.Router {
@@ -27,10 +51,28 @@ func Handlers() *mux.Router {
 	})
 
 	r.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
-		user := models.NewUser(db, r.Body)
-		createdUser := userService.CreateUser(user)
-		json.NewEncoder(w).Encode(createdUser)
-	}).Methods("POST")
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		user := models.User{}
+		err = ws.ReadJSON(&user)
+		if err != nil {
+			fmt.Println("Error reading json.", err)
+		}
+		_, err = userService.CreateUser(&user)
+		if err != nil {
+			log.Fatal(err)
+		}
+		clients[user.UserName] = ws
+		fmt.Printf("all clients %+v", clients)
+
+		userType := UserType{User: user, Type: "User"}
+
+		if err = ws.WriteJSON(userType); err != nil {
+			fmt.Println(err)
+		}
+	})
 
 	r.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		users := userService.AllUsers()
@@ -38,14 +80,32 @@ func Handlers() *mux.Router {
 	})
 
 	r.HandleFunc("/messages", func(w http.ResponseWriter, r *http.Request) {
-		message := models.NewMessage(db, r.Body)
-		createdMessage := messageService.CreateMessage(message)
-		json.NewEncoder(w).Encode(createdMessage)
-	}).Methods("POST")
-
-	r.HandleFunc("/messages", func(w http.ResponseWriter, r *http.Request) {
-		allMessages := messageService.AllMessages(r.FormValue("sender_id"), r.FormValue("receiver_id"))
+		allMessages := messageService.AllMessages(r.FormValue("sender"), r.FormValue("receiver"))
 		json.NewEncoder(w).Encode(allMessages)
+	})
+
+	// socket handler
+	http.HandleFunc("/send_message", func(w http.ResponseWriter, r *http.Request) {
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		message := models.Message{}
+		err = ws.ReadJSON(&message)
+		if err != nil {
+			fmt.Println(err)
+			log.Fatal(err)
+		}
+		messageService.CreateMessage(&message)
+		messageType := MessageType{Message: message, Type: "Message"}
+		receiverClient := clients[message.Receiver]
+		if err = receiverClient.WriteJSON(messageType); err != nil {
+			fmt.Println(err)
+		}
+		senderClient := clients[message.Sender]
+		if err = senderClient.WriteJSON(messageType); err != nil {
+			fmt.Println(err)
+		}
 	})
 
 	return r

@@ -11,12 +11,9 @@ import (
 type Message struct {
 	gorm.Model
 
-	Text       string `json:"text"`
-	SenderID   uint   `json:"sender_id"`
-	ReceiverID uint   `json:"receiver_id"`
-
-	Sender   User `gorm:"foreignkey:SenderID"`   // use SenderID as foreign key
-	Receiver User `gorm:"foreignkey:ReceiverID"` // use ReceiverID as foreign key
+	Text     string `json:"text"`
+	Sender   string `json:"sender"`
+	Receiver string `json:"receiver"`
 }
 
 // NewMessage - create message in db
@@ -27,8 +24,8 @@ func NewMessage(db *gorm.DB, data io.ReadCloser) *Message {
 }
 
 // AllMessages - get all users from db
-func AllMessages(db *gorm.DB, sID, rID string) *gorm.DB {
+func AllMessages(db *gorm.DB, sender, receiver string) *gorm.DB {
 	var messages []Message
-	query := "(sender_id = ? AND receiver_id = ? ) OR (receiver_id = ? AND sender_id = ? )"
-	return db.Where(query, sID, rID, sID, rID).Find(&messages)
+	query := "(sender = ? AND receiver = ? ) OR (receiver = ? AND sender = ? )"
+	return db.Where(query, sender, receiver, sender, receiver).Find(&messages)
 }

@@ -9,6 +9,7 @@ require (
 	github.com/go-delve/delve v1.3.2 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20191106031601-ce3c9ade29de // indirect
 	github.com/gorilla/mux v1.7.3
+	github.com/gorilla/websocket v1.4.1
 	github.com/jinzhu/gorm v1.9.12
 	github.com/joho/godotenv v1.3.0
 	github.com/kishankpatel/usp_client v0.0.0-20200108110937-2df9b526c017

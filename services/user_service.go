@@ -7,7 +7,7 @@ import (
 
 // UserService : interface to create user and get all users
 type UserService interface {
-	CreateUser(user *models.User) *gorm.DB
+	CreateUser(user *models.User) (*gorm.DB, error)
 	AllUsers() *gorm.DB
 }
 
@@ -22,8 +22,15 @@ func NewUserService(db *gorm.DB) UserService {
 	}
 }
 
-func (us userService) CreateUser(user *models.User) *gorm.DB {
-	return us.db.Create(&user)
+func (us userService) CreateUser(user *models.User) (*gorm.DB, error) {
+	userData := us.db.Create(&user)
+	if userData.Error != nil {
+		// return nil, userData.Error
+		// fmt.Println("userData.Error", userData.Error)
+		// TODO check unique username
+		userData = us.db.Where("user_name = ?", user.UserName).Find(&user)
+	}
+	return us.db.Create(&user), nil
 }
 
 func (us userService) AllUsers() *gorm.DB {

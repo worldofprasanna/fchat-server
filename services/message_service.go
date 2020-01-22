@@ -8,7 +8,7 @@ import (
 // MessageService :
 type MessageService interface {
 	CreateMessage(message *models.Message) *gorm.DB
-	AllMessages(senderID, receiverID string) *gorm.DB
+	AllMessages(sender, receiver string) *gorm.DB
 }
 
 type messageService struct {
@@ -26,6 +26,6 @@ func (us messageService) CreateMessage(message *models.Message) *gorm.DB {
 	return us.db.Create(&message)
 }
 
-func (us messageService) AllMessages(senderID, receiverID string) *gorm.DB {
-	return models.AllMessages(us.db, senderID, receiverID)
+func (us messageService) AllMessages(sender, receiver string) *gorm.DB {
+	return models.AllMessages(us.db, sender, receiver)
 }
