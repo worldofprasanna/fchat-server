@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/jinzhu/gorm"
 	"github.com/worldofprasanna/fchat-server/models"
 	"github.com/worldofprasanna/fchat-server/services"
 	"github.com/worldofprasanna/fchat-server/utils"
@@ -33,6 +34,18 @@ type UserType struct {
 type MessageType struct {
 	Message models.Message
 	Type    string
+}
+
+// UserList struct declaration
+type UserList struct {
+	Users      *gorm.DB
+	ActiveList map[string]*websocket.Conn
+	Type       string
+}
+
+// LogoutUser struct declaration
+type LogoutUser struct {
+	UserName string
 }
 
 // Handlers function
@@ -64,6 +77,14 @@ func Handlers() *mux.Router {
 		if err != nil {
 			log.Fatal(err)
 		}
+		for client := range clients {
+			fmt.Println("Sending res to:", client)
+			err := clients[client].WriteJSON(&UserList{Type: "UserList"})
+			if err != nil {
+				log.Printf("error: %v", err)
+			}
+		}
+
 		clients[user.UserName] = ws
 		fmt.Printf("all clients %+v", clients)
 
@@ -76,7 +97,7 @@ func Handlers() *mux.Router {
 
 	r.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		users := userService.AllUsers()
-		json.NewEncoder(w).Encode(users)
+		json.NewEncoder(w).Encode(&UserList{Users: users, ActiveList: clients})
 	})
 
 	r.HandleFunc("/messages", func(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +127,21 @@ func Handlers() *mux.Router {
 		if err = senderClient.WriteJSON(messageType); err != nil {
 			fmt.Println(err)
 		}
+	})
+
+	r.HandleFunc("/logout/{UserName}", func(w http.ResponseWriter, r *http.Request) {
+		name := mux.Vars(r)["UserName"]
+		defer clients[name].Close()
+		delete(clients, name)
+
+		for client := range clients {
+			fmt.Println("Sending res to:", client)
+			err := clients[client].WriteJSON(&UserList{Type: "UserList"})
+			if err != nil {
+				log.Printf("error: %v", err)
+			}
+		}
+		w.Write([]byte("logout_success"))
 	})
 
 	return r
